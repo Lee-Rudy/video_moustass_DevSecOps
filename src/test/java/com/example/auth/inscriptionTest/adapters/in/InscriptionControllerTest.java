@@ -26,7 +26,7 @@ class InscriptionControllerTest {
 
     @Test
     void createUser_shouldReturnSavedUser() throws Exception {
-        Users returned = new Users(10, "Alice", "alice@gmail.com", "HASH", false, "PUB", "vault-key-1");
+        Users returned = new Users(10, "Alice", "alice@gmail.com", "HASHEDPASSWORD123", false, "PUB", "vault-key-1");
 
         when(useCase.saveUser(any(Users.class))).thenReturn(returned);
 
