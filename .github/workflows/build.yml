@@ -29,6 +29,16 @@ jobs:
       - name: Package (Jar)
         run: mvn -B package -DskipTests
 
+        # Ce bloc sert à sauvegarder et télécharger les résultats de tes tests Maven depuis GitHub Actions, même quand ton build échoue.
+
+        # Ce bloc de code sert à récupérer (télécharger) les rapports de tests Maven dans GitHub Actions
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/**
+
       - name: Upload artifact (jar)
         uses: actions/upload-artifact@v4
         with:
