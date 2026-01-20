@@ -35,8 +35,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=lee-rudy_video_moustass_DevSecOps \
-            -Dsonar.organization=lee-rudy \
+            -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps \
+            -Dsonar.organization=Lee-Rudy \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${SONAR_TOKEN}
 
