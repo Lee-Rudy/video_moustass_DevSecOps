@@ -30,6 +30,7 @@
 		<java.version>17</java.version>
 		<spring-cloud-azure.version>6.1.0</spring-cloud-azure.version>
 		<spring-cloud.version>2025.0.1</spring-cloud.version>
+		<sonar.organization>lee-rudy</sonar.organization>
 	</properties>
 	<dependencies>
 		<dependency>

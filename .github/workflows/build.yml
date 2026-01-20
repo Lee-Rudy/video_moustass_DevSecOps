@@ -23,16 +23,17 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Build & Test (Maven)
-        run: mvn -B clean verify
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
         with:
-          projectBaseDir: .
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build & Test (Maven)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps
 
       - name: Package (Jar)
         run: mvn -B package -DskipTests
