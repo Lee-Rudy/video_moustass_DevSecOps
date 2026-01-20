@@ -26,14 +26,13 @@ jobs:
       - name: Build & Test (Maven)
         run: mvn -B clean verify
 
-      # ✅ SONARCLOUD (2e option : pas besoin de sonar-project.properties)
       - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: .
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B sonar:sonar \
-          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
       - name: Package (Jar)
         run: mvn -B package -DskipTests
