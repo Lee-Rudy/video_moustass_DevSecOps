@@ -1,4 +1,4 @@
-name: SonarCloud
+name: Build
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main", "develop" ]
 
 jobs:
-  sonarcloud:
+  build-test-sonar:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +23,38 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Cache SonarQube packages
+      - name: Cache Sonar packages
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
+      - name: Build & Test (Maven)
+        run: mvn -B clean verify
+
+      # SonarCloud (utilise une version EXISTANTE sur Maven Central)
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B clean org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps
+        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+
+      - name: Package (Jar)
+        run: mvn -B package -DskipTests
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/**
+
+      - name: Upload artifact (jar)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-jar
+          path: target/*.jar
