@@ -2,6 +2,8 @@ package com.example.auth.inscription.adapters.out;
 
 import com.example.auth.inscription.entity.Users;
 import com.example.auth.inscription.ports.out.InscriptionRepository;
+import com.example.auth.inscription.ports.out.SpringDataUsersRepository;
+
 import org.springframework.stereotype.Component;
 
 @Component
