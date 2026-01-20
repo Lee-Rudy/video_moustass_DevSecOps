@@ -33,18 +33,21 @@ jobs:
       - name: Build & Test (Maven)
         run: mvn -B clean verify
 
-      # SonarCloud (utilise une version EXISTANTE sur Maven Central)
+      # ---------- SONARCLOUD (CORRECT INDENTATION) ----------
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
-          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+        run: |
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
 
+      # ---------- PACKAGE ----------
       - name: Package (Jar)
         run: mvn -B package -DskipTests
 
+      # ---------- UPLOAD TEST REPORTS ----------
       - name: Upload surefire reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,6 +55,7 @@ jobs:
           name: surefire-reports
           path: target/surefire-reports/**
 
+      # ---------- UPLOAD JAR ----------
       - name: Upload artifact (jar)
         if: success()
         uses: actions/upload-artifact@v4
