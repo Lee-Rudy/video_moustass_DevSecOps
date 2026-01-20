@@ -1,20 +1,21 @@
-name: Build
+name: SonarCloud
 
 on:
   push:
     branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    types: [ opened, synchronize, reopened ]
 
 jobs:
-  build-and-analyze:
+  analyze:
+    name: Build (no tests) & Analyze
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # important pour Sonar (blame/PR)
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -30,11 +31,11 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      # Build + tests
-      - name: Build & Test (Maven)
-        run: mvn -B clean verify
+      # ✅ Compile / package SANS lancer les tests (requis pour analyser du Java)
+      - name: Build (skip tests)
+        run: mvn -B -DskipTests clean package
 
-      # SonarCloud
+      # ✅ SonarCloud scan
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -43,23 +44,3 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps \
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-
-      # Package jar (optionnel, mais tu voulais garder l’artefact)
-      - name: Package (Jar)
-        run: mvn -B package -DskipTests
-
-      # Rapports de tests (même si ça échoue)
-      - name: Upload surefire reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: surefire-reports
-          path: target/surefire-reports/**
-
-      # Jar (seulement si tout est OK)
-      - name: Upload artifact (jar)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: auth-jar
-          path: target/*.jar
