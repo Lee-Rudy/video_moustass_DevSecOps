@@ -39,3 +39,4 @@ jobs:
           -Dsonar.organization=lee-rudy
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.token=${SONAR_TOKEN}
+          -Dsonar.source=.
