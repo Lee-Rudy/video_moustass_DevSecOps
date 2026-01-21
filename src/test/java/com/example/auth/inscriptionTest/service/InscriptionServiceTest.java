@@ -19,7 +19,7 @@ class InscriptionServiceTest {
     private BCryptPasswordEncoder encoder;
     private InscriptionService service;
 
-    private static final String password = "PasswordA1";
+    private static final String password = "PasswordA12";
 
     @BeforeEach
     void setUp() {
