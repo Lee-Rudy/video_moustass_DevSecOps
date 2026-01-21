@@ -1,44 +1,59 @@
-name: SonarQube
+name: SonarCloud
+
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
-  build:
-    name: Build and analyze
+  sonar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
+      # ----- BACK (Java) -----
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
+          distribution: zulu
+          java-version: "17"
+
+      - name: Cache Maven
         uses: actions/cache@v4
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
+
+      - name: Build + tests (generate JaCoCo)
+        run: mvn -B clean verify
+
+      # ----- FRONT (optional but recommended if you want JS analysis) -----
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install front deps
+        working-directory: front
+        run: npm ci
+
+      - name: Build front
+        working-directory: front
+        run: npm run build
+
+      # ----- SONAR (scans whole repo) -----
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn -B verify sonar:sonar
-          -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps
-          -Dsonar.organization=lee-rudy
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=${SONAR_TOKEN}
-          -Dsonar.sources=.
-
-        # chemin spécifié
+        with:
+          args: >
+            -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps
+            -Dsonar.organization=lee-rudy
+            -Dsonar.sources=src,front/src
+            -Dsonar.exclusions=**/target/**,**/node_modules/**,front/dist/**,front/build/**
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
