@@ -21,7 +21,6 @@ class InscriptionServiceTest {
 
     private static final String password = "PasswordA1";
 
-
     @BeforeEach
     void setUp() {
         repo = mock(InscriptionRepository.class);
