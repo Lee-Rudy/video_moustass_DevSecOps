@@ -65,7 +65,7 @@ class InscriptionServiceTest {
 
         assertEquals(saved.getVaultKey(), toSave.getVaultKey());
         assertEquals("PUBLIC_KEY_VALUE", toSave.getPublicKey());
-        assertTrue(encoder.matches("PasswordA1", toSave.getPsw()));
+        assertTrue(encoder.matches(password, toSave.getPsw()));
     }
 
     @Test
