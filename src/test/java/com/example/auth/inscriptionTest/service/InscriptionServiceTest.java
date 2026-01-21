@@ -19,6 +19,9 @@ class InscriptionServiceTest {
     private BCryptPasswordEncoder encoder;
     private InscriptionService service;
 
+    private static final String password = "PasswordA1";
+
+
     @BeforeEach
     void setUp() {
         repo = mock(InscriptionRepository.class);
@@ -48,8 +51,9 @@ class InscriptionServiceTest {
         assertEquals("PUBLIC_KEY_VALUE", saved.getPublicKey());
 
         // then: password doit être hashé (différent du clair)
-        assertNotEquals("PasswordA1", saved.getPsw());
-        assertTrue(encoder.matches("PasswordA1", saved.getPsw()));
+
+        assertNotEquals(password, saved.getPsw());
+        assertTrue(encoder.matches(password, saved.getPsw()));
 
         // then: Vault appelé correctement
         verify(vault, times(1)).createSigningKey(saved.getVaultKey());
