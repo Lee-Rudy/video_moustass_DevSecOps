@@ -1,14 +1,18 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import "./App.css";
 
 export default function App() {
   return (
-    <>
+    <div className="layout">
       <Navbar />
-      <Outlet />
-    </>
+      <main className="content">
+        <Outlet />
+      </main>
+    </div>
   );
 }
+
 
 // Outlet = l’endroit où React Router va afficher la page courante.
 
