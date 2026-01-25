@@ -22,7 +22,7 @@ class InscriptionControllerTest {
     @Autowired
     MockMvc mockMvc;
 
-    // @MockBean
+    @MockBean
     InscriptionUseCase useCase;
 
     @Test
