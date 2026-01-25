@@ -7,4 +7,5 @@ import com.example.auth.inscription.adapters.out.UsersJpaEntity;
 public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity, Integer> 
 {
     boolean existsByMail(String mail);
+    java.util.Optional<UsersJpaEntity> findByMail(String mail);
 }
