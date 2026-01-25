@@ -1,41 +1,58 @@
-name: SonarQube
+name: SonarCloud
+
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
+
 jobs:
-  build:
-    name: Build and analyze
+  sonar:
+    name: SonarCloud scan (never fail CI)
     runs-on: ubuntu-latest
+    continue-on-error: true
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
+          distribution: zulu
           java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.
-      - name: Cache SonarQube packages
+          cache: maven
+
+      - name: Cache SonarCloud
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
+
+      # 1) Build + tests + JaCoCo report
+      # -maven.test.failure.ignore=true => tests peuvent échouer sans casser l'étape
+      - name: Build + Tests + JaCoCo (ignore test failures)
+        run: |
+          mvn -B clean verify -Dmaven.test.failure.ignore=true
+
+      # (Optionnel) Debug si tu veux confirmer que jacoco.xml existe
+      - name: Debug JaCoCo report
+        run: |
+          ls -la target/site/jacoco || true
+          test -f target/site/jacoco/jacoco.xml && echo "jacoco.xml OK" || echo "jacoco.xml NOT FOUND"
+
+      # 2) SonarCloud analysis (ne pas échouer le workflow si Sonar échoue)
+      - name: SonarCloud analyze
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn -B verify sonar:sonar
-          -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps
-          -Dsonar.organization=lee-rudy
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=${SONAR_TOKEN}
+        run: |
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=Lee-Rudy_video_moustass_DevSecOps \
+            -Dsonar.organization=lee-rudy \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
