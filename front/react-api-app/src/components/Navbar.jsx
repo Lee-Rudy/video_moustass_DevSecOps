@@ -20,6 +20,12 @@ export default function Navbar() {
             {r.label}
           </NavLink>
         ))}
+        <NavLink
+          to="/"
+          className="sidebar__link sidebar__link--logout"
+        >
+          Déconnexion
+        </NavLink>
       </nav>
     </aside>
   );

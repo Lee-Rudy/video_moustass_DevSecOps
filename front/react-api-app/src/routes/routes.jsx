@@ -1,14 +1,20 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
+import Login from "../pages/Login";
 import { routesConfig } from "./routesConfig";
 
 export const router = createBrowserRouter([
+  // Page d'entrée "/" : Login seul, sans Navbar
+  {
+    path: "/",
+    element: <Login />,
+  },
+  // Layout avec Navbar pour les autres pages
   {
     path: "/",
     element: <App />,
     children: routesConfig.map((r) => ({
-      path: r.path === "/" ? undefined : r.path.replace("/", ""),
-      index: r.path === "/",
+      path: r.path.slice(1),
       element: <r.component />,
     })),
   },
