@@ -6,10 +6,10 @@ import Order from "../pages/Order";
 
 
 export const routesConfig = [
-  { path: "/", label: "Home", component: Home, end: true },
+  { path: "/", label: "Login", component: Login, end: true },
+  { path: "/dashboard", label: "Home", component: Home, end: true },
   { path: "/about", label: "About", component: About },
   { path: "/contact", label: "Contact", component: Contact },
-  { path: "/login", label: "login", component: Login },
   { path: "/order", label: "Order", component: Order },
 
 ];
