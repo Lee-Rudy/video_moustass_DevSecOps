@@ -3,7 +3,6 @@ import About from "../pages/About";
 import Contact from "../pages/Contact";
 import Login from "../pages/Login";
 
-
 export const routesConfig = [
   { path: "/", label: "Home", component: Home, end: true },
   { path: "/about", label: "About", component: About },
