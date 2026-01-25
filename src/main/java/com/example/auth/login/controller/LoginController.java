@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.auth.login.models.LoginService;
-import com.example.auth.login.models.LoginService.LoginResponse;
+
 
 @RestController
 @RequestMapping("/api/login")
