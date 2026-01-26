@@ -1,7 +1,9 @@
 package com.example.auth.order;
 
+import com.example.auth.audit.service.AuditLogService;
 import com.example.auth.inscription.ports.out.SpringDataUsersRepository;
 import com.example.auth.login.entity.SignatureTransactionJpaEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +22,12 @@ public class OrderController {
 
     private final OrderService orderService;
     private final SpringDataUsersRepository userRepo;
+    private final AuditLogService auditLogService;
 
-    public OrderController(OrderService orderService, SpringDataUsersRepository userRepo) {
+    public OrderController(OrderService orderService, SpringDataUsersRepository userRepo, AuditLogService auditLogService) {
         this.orderService = orderService;
         this.userRepo = userRepo;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -35,7 +39,8 @@ public class OrderController {
             @RequestParam("transaction_send_to") String transactionSendTo,
             @RequestParam("montant") String montantStr,
             @RequestParam("video_name") String videoName,
-            @RequestParam("video") MultipartFile video) {
+            @RequestParam("video") MultipartFile video,
+            HttpServletRequest request) {
 
         if (transactionSendTo == null || transactionSendTo.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "transaction_send_to requis"));
@@ -56,6 +61,16 @@ public class OrderController {
 
         try {
             OrderService.CreateOrderResult r = orderService.createOrder(userId, transactionSendTo.trim(), montant, videoName.trim(), video);
+            
+            // Log de l'action
+            String actorName = userRepo.findById(userId).map(u -> u.getName() != null ? u.getName() : "").orElse("");
+            String message = String.format("%s a créé un ordre pour %s (montant: $%s, vidéo: %s)", 
+                    actorName.isEmpty() ? "Utilisateur #" + userId : actorName, 
+                    transactionSendTo.trim(), 
+                    montant.toString(), 
+                    videoName.trim());
+            auditLogService.logAction(userId, "TX_CREATED", "signature_transactions", r.id(), message, request);
+            
             return ResponseEntity.ok(Map.of("id", r.id(), "steps", r.steps()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -82,10 +97,16 @@ public class OrderController {
      * POST /api/orders/:id/validate : scan, déchiffrement, vérification signature. Retourne videoBase64 ou erreur "Vidéo corrompue".
      */
     @PostMapping("/{id}/validate")
-    public ResponseEntity<?> validate(@RequestAttribute("userId") Integer userId, @PathVariable("id") Integer id) {
+    public ResponseEntity<?> validate(@RequestAttribute("userId") Integer userId, @PathVariable("id") Integer id, HttpServletRequest request) {
         String currentUserName = userRepo.findById(userId).map(u -> u.getName() != null ? u.getName() : "").orElse("");
         try {
             OrderService.ValidateOrderResult r = orderService.validateOrder(id, currentUserName);
+            
+            // Log de la validation
+            String message = String.format("%s a validé l'ordre #%d (vidéo déchiffrée et signature vérifiée)", 
+                    currentUserName.isEmpty() ? "Utilisateur #" + userId : currentUserName, id);
+            auditLogService.logAction(userId, "TX_VALIDATED", "signature_transactions", id, message, request);
+            
             return ResponseEntity.ok(Map.of("success", r.success(), "videoBase64", r.videoBase64()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

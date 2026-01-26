@@ -73,3 +73,12 @@ export async function validateOrder(id, token) {
   if (!res.ok) throw new Error(data.error || 'Erreur validation');
   return data;
 }
+
+/**
+ * GET /api/logs : tous les logs d'audit triés par date décroissante.
+ */
+export async function getLogs(token) {
+  const res = await fetch(API_BASE + '/api/logs', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Erreur chargement logs');
+  return res.json();
+}

@@ -10,7 +10,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtre JWT : pour /api/users et /api/orders*, exige un Bearer valide et définit request.setAttribute("userId", id).
+ * Filtre JWT : pour /api/users, /api/orders* et /api/logs, exige un Bearer valide et définit request.setAttribute("userId", id).
  * Pour /api/login et /api/inscription, laisse passer sans JWT.
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -33,7 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        if (!path.startsWith("/api/users") && !path.startsWith("/api/orders")) {
+        if (!path.startsWith("/api/users") && !path.startsWith("/api/orders") && !path.startsWith("/api/logs")) {
             filterChain.doFilter(request, response);
             return;
         }
