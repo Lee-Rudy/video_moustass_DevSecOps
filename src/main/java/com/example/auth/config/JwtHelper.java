@@ -32,4 +32,12 @@ public class JwtHelper {
                 .signWith(key)
                 .compact();
     }
+
+    /** Extrait le userId du JWT (Bearer). Lance si token invalide. */
+    public Integer parseUserId(String token) {
+        return Jwts.parser().verifyWith(key).build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("userId", Integer.class);
+    }
 }

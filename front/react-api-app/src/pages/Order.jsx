@@ -1,15 +1,10 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
+import { getUsers, createOrder } from "../api/authApi";
 
 /**
- * Clean Transaction Video Form (FULL)
- * ✅ Fix superposition champs (grid responsive + minWidth/boxSizing)
- * ✅ Force webcam PC (ignore phone/continuity/droidcam) via enumerateDevices + deviceId exact
- * ✅ Real live recording (getUserMedia + MediaRecorder)
- * ✅ Preview live + playback + download
- *
- * Notes:
- * - getUserMedia works on https or localhost
- * - First time: browser permission popup is normal (mandatory)
+ * Formulaire d’ordre de transaction avec enregistrement vidéo live.
+ * Envoi à un utilisateur (non-admin), montant, titre, vidéo ; la vidéo est chiffrée et signée côté backend.
  */
 
 function useMediaQuery(query) {
@@ -28,46 +23,37 @@ function useMediaQuery(query) {
   return matches;
 }
 
-export default function About() {
-  // Mock data (later from API)
-  const people = useMemo(
-    () => [
-      { id: "u1", name: "Bruner Noel" },
-      { id: "u2", name: "Moussa Diallo" },
-      { id: "u3", name: "Mino Zo" },
-      { id: "u4", name: "Rota Randria" },
-      { id: "u5", name: "Alice Rakoto" },
-    ],
-    []
-  );
-
-  // -------------------------
-  // Responsive
-  // -------------------------
+export default function Order() {
+  const { user } = useAuth();
   const isNarrow = useMediaQuery("(max-width: 920px)");
 
-  // -------------------------
-  // Form state
-  // -------------------------
+  const [people, setPeople] = useState([]);
+  const [peopleLoadErr, setPeopleLoadErr] = useState("");
   const [search, setSearch] = useState("");
-  const [recipientId, setRecipientId] = useState("");
+  const [transactionSendTo, setTransactionSendTo] = useState("");
   const [amount, setAmount] = useState("5000");
   const [title, setTitle] = useState("2000 dollars");
-  const [errors, setErrors] = useState({
-    recipientId: "",
-    amount: "",
-    title: "",
-  });
+  const [errors, setErrors] = useState({ transactionSendTo: "", amount: "", title: "", video: "" });
+  const [submitSteps, setSubmitSteps] = useState([]);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!user?.token) return;
+    getUsers(user.token)
+      .then((arr) => setPeople(Array.isArray(arr) ? arr : []))
+      .catch(() => setPeopleLoadErr("Impossible de charger la liste des destinataires."));
+  }, [user?.token]);
 
   const selectedRecipient = useMemo(
-    () => people.find((p) => p.id === recipientId) || null,
-    [people, recipientId]
+    () => people.find((p) => String(p.name) === transactionSendTo) || null,
+    [people, transactionSendTo]
   );
 
   const filteredPeople = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return people;
-    return people.filter((p) => p.name.toLowerCase().includes(q));
+    return people.filter((p) => String(p.name || "").toLowerCase().includes(q));
   }, [people, search]);
 
   // -------------------------
@@ -94,25 +80,18 @@ export default function About() {
     return v;
   };
 
-  const validate = useCallback(() => {
-    const next = { recipientId: "", amount: "", title: "" };
-
-    if (!recipientId)
-      next.recipientId = "Veuillez sélectionner un destinataire.";
-
+  const validate = useCallback((recordedBlob) => {
+    const next = { transactionSendTo: "", amount: "", title: "", video: "" };
+    if (!transactionSendTo) next.transactionSendTo = "Veuillez sélectionner un destinataire.";
     if (!amount.trim()) next.amount = "Veuillez saisir un montant.";
-    else if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
-      next.amount = "Format invalide (ex: 5000 ou 5000.50).";
-    }
-
+    else if (!/^\d+(\.\d{1,2})?$/.test(amount)) next.amount = "Format invalide (ex: 5000 ou 5000.50).";
     const cleanTitle = sanitizeTitle(title);
     if (!cleanTitle) next.title = "Veuillez saisir un titre valide.";
-    else if (cleanTitle.length < 4)
-      next.title = "Titre trop court (min 4 caractères).";
-
+    else if (cleanTitle.length < 4) next.title = "Titre trop court (min 4 caractères).";
+    if (!recordedBlob) next.video = "Veuillez enregistrer une vidéo avant d’enregistrer l’ordre.";
     setErrors(next);
-    return !next.recipientId && !next.amount && !next.title;
-  }, [recipientId, amount, title]);
+    return !next.transactionSendTo && !next.amount && !next.title && !next.video;
+  }, [transactionSendTo, amount, title]);
 
   // -------------------------
   // Recording state (real)
@@ -303,38 +282,49 @@ export default function About() {
     setRecordedBlob(null);
   }, [revokeRecordedUrl]);
 
-  // -------------------------
-  // Submit / Reset
-  // -------------------------
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    const ok = validate();
-    if (!ok) return;
+    setSubmitError("");
+    setSubmitSuccess(false);
+    if (!validate(recordedBlob)) return;
+    if (!user?.token) {
+      setSubmitError("Session expirée. Reconnectez-vous.");
+      return;
+    }
 
-    const payload = {
-      recipientId,
-      amount: amount.trim(),
-      title: sanitizeTitle(title),
-      hasVideo: !!recordedBlob,
-      // later: send recordedBlob with FormData
-    };
+    const formData = new FormData();
+    formData.append("transaction_send_to", transactionSendTo.trim());
+    formData.append("montant", amount.trim());
+    formData.append("video_name", sanitizeTitle(title));
+    const ext = (recordedBlob.type || "").split("/")[1] || "webm";
+    formData.append("video", new File([recordedBlob], `video.${ext}`, { type: recordedBlob.type }));
 
-    console.log("Front payload (demo):", payload);
-    alert(
-      recordedBlob
-        ? "OK ✅ Formulaire + vidéo enregistrée (front). Prêt à brancher backend."
-        : "OK ✅ Formulaire (front). Enregistre la vidéo pour compléter."
-    );
+    setSubmitSteps([{ label: "Envoi de la vidéo…", status: "loading" }, { label: "Chiffrement…", status: "pending" }, { label: "Signature RSA…", status: "pending" }]);
+
+    try {
+      const res = await createOrder(formData, user.token);
+      const steps = res.steps || ["Vidéo chiffrée", "Vidéo signée RSA"];
+      setSubmitSteps([
+        { label: "Envoi", status: "done" },
+        { label: steps[0] || "Chiffrement", status: "done" },
+        { label: steps[1] || "Signature RSA", status: "done" },
+      ]);
+      setSubmitSuccess(true);
+    } catch (err) {
+      setSubmitError(err.message || "Erreur lors de l’enregistrement.");
+      setSubmitSteps((s) => s.map((x) => ({ ...x, status: x.status === "loading" ? "error" : x.status })));
+    }
   };
 
   const onReset = () => {
     setSearch("");
-    setRecipientId("");
+    setTransactionSendTo("");
     setAmount("");
     setTitle("");
-    setErrors({ recipientId: "", amount: "", title: "" });
-
-    // recording reset
+    setErrors({ transactionSendTo: "", amount: "", title: "", video: "" });
+    setSubmitSteps([]);
+    setSubmitError("");
+    setSubmitSuccess(false);
     closeRecorder();
     clearRecorded();
   };
@@ -370,23 +360,20 @@ export default function About() {
               />
 
               <select
-                value={recipientId}
-                onChange={(e) => setRecipientId(e.target.value)}
+                value={transactionSendTo}
+                onChange={(e) => setTransactionSendTo(e.target.value)}
                 style={ui.select}
               >
-                <option value="" style={ui.option}>
-                  — Sélectionner —
-                </option>
+                <option value="">— Sélectionner —</option>
                 {filteredPeople.map((p) => (
-                  <option key={p.id} value={p.id} style={ui.option}>
+                  <option key={p.id} value={String(p.name || "")} style={ui.option}>
                     {p.name}
                   </option>
                 ))}
               </select>
 
-              {errors.recipientId ? (
-                <div style={ui.error}>{errors.recipientId}</div>
-              ) : null}
+              {peopleLoadErr ? <div style={ui.error}>{peopleLoadErr}</div> : null}
+              {errors.transactionSendTo ? <div style={ui.error}>{errors.transactionSendTo}</div> : null}
             </div>
           </div>
 
@@ -514,6 +501,7 @@ export default function About() {
                 </div>
 
                 <div style={{ marginTop: 14 }}>
+                  {errors.video && !recordedUrl ? <div style={ui.error}>{errors.video}</div> : null}
                   <div style={ui.panelTitleRow}>
                     <div style={ui.panelTitle} aria-hidden>
                       Vidéo enregistrée
@@ -540,9 +528,7 @@ export default function About() {
                       >
                         Télécharger la vidéo (.webm)
                       </a>
-                      <div style={ui.smallHint}>
-                        (Plus tard : envoi du blob au backend via FormData.)
-                      </div>
+                      <div style={ui.smallHint}>La vidéo sera chiffrée et signée à l’envoi.</div>
                     </>
                   ) : (
                     <div style={ui.muted}>Aucune vidéo enregistrée pour l’instant.</div>
@@ -553,10 +539,23 @@ export default function About() {
           ) : null}
         </div>
 
+        {/* Étapes à l’envoi + erreur / succès */}
+        {submitSteps.length > 0 && (
+          <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            {submitSteps.map((s, i) => (
+              <div key={i} style={{ fontSize: 13, marginBottom: 6, color: s.status === "done" ? "#15803d" : s.status === "error" ? "#b91c1c" : "#475569" }}>
+                {s.status === "done" ? "✓ " : s.status === "loading" ? "⋯ " : "○ "}{s.label}
+              </div>
+            ))}
+          </div>
+        )}
+        {submitError && <div style={{ ...ui.error, marginTop: 12 }}>{submitError}</div>}
+        {submitSuccess && <div style={{ marginTop: 12, color: "#15803d", fontWeight: 800 }}>Ordre enregistré avec succès.</div>}
+
         {/* Actions */}
         <div style={ui.actions}>
-          <button type="submit" style={ui.btnDark}>
-            Enregistrer (front)
+          <button type="submit" style={ui.btnDark} disabled={submitSteps.some((s) => s.status === "loading")}>
+            Enregistrer
           </button>
           <button type="button" onClick={onReset} style={ui.btnLight}>
             Réinitialiser

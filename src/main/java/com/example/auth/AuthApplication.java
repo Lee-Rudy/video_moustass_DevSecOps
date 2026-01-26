@@ -1,5 +1,7 @@
 package com.example.auth;
 
+import com.example.auth.inscription.entity.Users;
+import com.example.auth.inscription.ports.in.InscriptionUseCase;
 import com.example.auth.login.models.LoginService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -42,16 +44,19 @@ public class AuthApplication
     // CommandLineRunner demo(InscriptionUseCase useCase) 
 	// {
     //     return args -> {
-    //         Users admin = new Users(0, "Admin", "brunerleerudy@gmail.com", "Admin123456789", true, null, null);
-    //         Users user  = new Users(1, "Alice", "alice@gmail.com", "Alice123456789", false, null, null);
+    //         // Users admin = new Users(0, "Admin", "brunerleerudy@gmail.com", "Admin123456789", true, null, null);
+    //         // Users user  = new Users(1, "Alice", "alice@gmail.com", "Alice123456789", false, null, null);
+    //         Users user  = new Users(3, "Rudy", "brunerlee@gmail.com", "Rudy123456789", false, null, null);
+    //         //Users user  = new Users(5, "Lee", "brunerleerudy@gmail.com", "Lee123456789", false, null, null);
 
-    //         Users savedAdmin = useCase.saveUser(admin);
+
+    //         // Users savedAdmin = useCase.saveUser(admin);
     //         Users savedUser  = useCase.saveUser(user);
 
-    //         System.out.println("ADMIN saved => id=" + savedAdmin.getIdUsers()
-    //                 + " mail=" + savedAdmin.getMail()
-    //                 + " isAdmin=" + savedAdmin.getIsAdmin()
-    //                 + " vaultKey=" + savedAdmin.getVaultKey());
+    //         // System.out.println("ADMIN saved => id=" + savedAdmin.getIdUsers()
+    //         //         + " mail=" + savedAdmin.getMail()
+    //         //         + " isAdmin=" + savedAdmin.getIsAdmin()
+    //         //         + " vaultKey=" + savedAdmin.getVaultKey());
 
     //         System.out.println("USER saved  => id=" + savedUser.getIdUsers()
     //                 + " mail=" + savedUser.getMail()

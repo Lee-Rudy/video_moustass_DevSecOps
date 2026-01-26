@@ -4,8 +4,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.auth.inscription.adapters.out.UsersJpaEntity;
 
-public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity, Integer> 
-{
+public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity, Integer> {
+
     boolean existsByMail(String mail);
+
     java.util.Optional<UsersJpaEntity> findByMail(String mail);
+
+    /** Utilisateurs non-admin pour le champ « Envoyé à » (Order). */
+    java.util.List<UsersJpaEntity> findByIsAdminFalse();
 }
