@@ -32,7 +32,7 @@ class LoginControllerTest {
     @Test
     void login_returns200_andTokenUserId_whenCredentialsValid() throws Exception {
         when(loginService.authenticate("alice@gmail.com", "Alice123456789"))
-                .thenReturn(Optional.of(new LoginResponse("jwt-token-xyz", 1)));
+                .thenReturn(Optional.of(new LoginResponse("jwt-token-xyz", 1, "Alice")));
 
         String json = """
                 { "mail": "alice@gmail.com", "password": "Alice123456789" }
@@ -43,7 +43,8 @@ class LoginControllerTest {
                         .content(json))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-xyz"))
-                .andExpect(jsonPath("$.userId").value(anyOf(equalTo(1), equalTo(1L))));
+                .andExpect(jsonPath("$.userId").value(anyOf(equalTo(1), equalTo(1L))))
+                .andExpect(jsonPath("$.name").value("Alice"));
 
         verify(loginService).authenticate("alice@gmail.com", "Alice123456789");
     }

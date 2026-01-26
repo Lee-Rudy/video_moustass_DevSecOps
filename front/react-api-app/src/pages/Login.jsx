@@ -1,19 +1,32 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../components/css/Login/Login.css";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const googleIconUrl =
     "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => setLoading(false), 700);
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err?.message || "Erreur de connexion");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -35,6 +48,7 @@ export default function Login() {
           <div className="divider">OU</div>
 
           <form onSubmit={handleSubmit}>
+            {error && <p className="login-error" style={{ color: "#c00", marginBottom: 8 }}>{error}</p>}
             <label>Email</label>
             <input
               type="email"

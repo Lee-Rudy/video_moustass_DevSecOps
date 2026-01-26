@@ -34,8 +34,9 @@ public class LoginService {
         UsersJpaEntity u = opt.get();
         if (!encoder.matches(password, u.getPswHash())) return Optional.empty();
         String token = jwtHelper.createToken(u.getId());
-        return Optional.of(new LoginResponse(token, u.getId()));
+        String name = u.getName() != null ? u.getName() : "";
+        return Optional.of(new LoginResponse(token, u.getId(), name));
     }
 
-    public record LoginResponse(String token, Integer userId) {}
+    public record LoginResponse(String token, Integer userId, String name) {}
 }

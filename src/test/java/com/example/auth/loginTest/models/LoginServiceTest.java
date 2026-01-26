@@ -34,6 +34,7 @@ class LoginServiceTest {
     void authenticate_returnsTokenAndUserId_whenUserExistsAndPasswordMatches() {
         UsersJpaEntity user = new UsersJpaEntity();
         user.setId(1);
+        user.setName("Alice");
         user.setMail("alice@gmail.com");
         user.setPswHash("$2a$10$HASH");
 
@@ -46,6 +47,7 @@ class LoginServiceTest {
         assertTrue(opt.isPresent());
         assertEquals("jwt-token-123", opt.get().token());
         assertEquals(1, opt.get().userId());
+        assertEquals("Alice", opt.get().name());
         verify(userRepo).findByMail("alice@gmail.com");
         verify(encoder).matches("Alice123456789", user.getPswHash());
         verify(jwtHelper).createToken(1);
