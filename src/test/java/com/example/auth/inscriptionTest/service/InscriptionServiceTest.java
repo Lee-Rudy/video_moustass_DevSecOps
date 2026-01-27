@@ -83,4 +83,78 @@ class InscriptionServiceTest {
         // assure qu'on ne sauvegarde pas en DB si Vault échoue (bonne pratique)
         verify(repo, never()).save(any());
     }
+
+    @Test
+    void getAllUsers_shouldReturnAllUsersFromRepository() {
+        Users user1 = new Users(1, "Alice", "alice@test.com", "HASH1", false, "PUB1", "vault1");
+        Users user2 = new Users(2, "Bob", "bob@test.com", "HASH2", false, "PUB2", "vault2");
+        Users admin = new Users(3, "Admin", "admin@test.com", "HASH3", true, "PUB3", "vault3");
+
+        when(repo.findAll()).thenReturn(java.util.Arrays.asList(user1, user2, admin));
+
+        java.util.List<Users> result = service.getAllUsers();
+
+        assertEquals(3, result.size());
+        assertEquals("Alice", result.get(0).getName());
+        assertEquals("Bob", result.get(1).getName());
+        assertEquals("Admin", result.get(2).getName());
+        assertTrue(result.get(2).getIsAdmin());
+        verify(repo, times(1)).findAll();
+    }
+
+    @Test
+    void getAllUsers_shouldReturnEmptyList_whenNoUsers() {
+        when(repo.findAll()).thenReturn(java.util.Collections.emptyList());
+
+        java.util.List<Users> result = service.getAllUsers();
+
+        assertTrue(result.isEmpty());
+        verify(repo, times(1)).findAll();
+    }
+
+    @Test
+    void deleteUser_shouldCallRepositoryDeleteById() {
+        Integer userId = 5;
+
+        doNothing().when(repo).deleteById(userId);
+
+        service.deleteUser(userId);
+
+        verify(repo, times(1)).deleteById(userId);
+    }
+
+    @Test
+    void deleteUser_shouldCallRepositoryWithCorrectId() {
+        Integer userId = 123;
+
+        doNothing().when(repo).deleteById(anyInt());
+
+        service.deleteUser(userId);
+
+        verify(repo).deleteById(eq(123));
+    }
+
+    @Test
+    void saveUser_shouldHandleAdminUser() {
+        Users adminInput = new Users(0, "SuperAdmin", "admin@test.com", "AdminPass123", true, null, null);
+
+        when(vault.exportPublicKey(anyString())).thenReturn("ADMIN_PUBLIC_KEY");
+        when(repo.save(any(Users.class))).thenAnswer(invocation -> {
+            Users u = invocation.getArgument(0);
+            u.setIdUsers(99);
+            return u;
+        });
+
+        Users saved = service.saveUser(adminInput);
+
+        assertEquals("SuperAdmin", saved.getName());
+        assertTrue(saved.getIsAdmin());
+        assertEquals("ADMIN_PUBLIC_KEY", saved.getPublicKey());
+        assertNotNull(saved.getVaultKey());
+        assertTrue(encoder.matches("AdminPass123", saved.getPsw()));
+
+        verify(vault).createSigningKey(anyString());
+        verify(vault).exportPublicKey(anyString());
+        verify(repo).save(any(Users.class));
+    }
 }

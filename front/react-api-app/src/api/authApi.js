@@ -13,7 +13,7 @@ function authHeaders(token) {
 
 /**
  * Login : POST /api/login avec { mail, password }.
- * @returns { Promise<{ token, userId, name }> }
+ * @returns { Promise<{ token, userId, name, isAdmin }> }
  */
 export async function login(mail, password) {
   const res = await fetch(API_BASE + '/api/login', {
@@ -81,4 +81,40 @@ export async function getLogs(token) {
   const res = await fetch(API_BASE + '/api/logs', { headers: authHeaders(token) });
   if (!res.ok) throw new Error('Erreur chargement logs');
   return res.json();
+}
+
+/**
+ * POST /api/inscription/create : créer un nouvel utilisateur (admin uniquement).
+ */
+export async function createUser(userData, token) {
+  const res = await fetch(API_BASE + '/api/inscription/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j.message || 'Erreur création utilisateur');
+  }
+  return res.json();
+}
+
+/**
+ * GET /api/inscription/users : récupérer tous les utilisateurs (admin uniquement).
+ */
+export async function getAllUsers(token) {
+  const res = await fetch(API_BASE + '/api/inscription/users', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Erreur chargement utilisateurs');
+  return res.json();
+}
+
+/**
+ * DELETE /api/inscription/users/:id : supprimer un utilisateur (admin uniquement).
+ */
+export async function deleteUser(userId, token) {
+  const res = await fetch(API_BASE + '/api/inscription/users/' + userId, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Erreur suppression utilisateur');
 }

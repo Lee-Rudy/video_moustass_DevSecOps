@@ -28,7 +28,8 @@ public class LoginController {
         
         // Log de la connexion
         LoginService.LoginResponse response = opt.get();
-        String message = String.format("Connexion réussie (userId: %d, name: %s)", response.userId(), response.name());
+        String message = String.format("Connexion réussie (userId: %d, name: %s, isAdmin: %b)", 
+                response.userId(), response.name(), response.isAdmin());
         auditLogService.logAction(response.userId(), "USER_LOGIN", "users", response.userId(), message, request);
         
         return ResponseEntity.ok(response);

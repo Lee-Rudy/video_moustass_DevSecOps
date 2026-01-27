@@ -25,18 +25,29 @@ public class LoginService {
 
     /**
      * Authentifie mail + mot de passe, renvoie token et userId si ok.
+     * Supporte plusieurs utilisateurs avec le même email (différenciés par mot de passe).
      */
     public Optional<LoginResponse> authenticate(String mail, String password) {
         if (mail == null || password == null) return Optional.empty();
         String mailNorm = mail.trim().toLowerCase();
-        Optional<UsersJpaEntity> opt = userRepo.findByMail(mailNorm);
-        if (opt.isEmpty()) return Optional.empty();
-        UsersJpaEntity u = opt.get();
-        if (!encoder.matches(password, u.getPswHash())) return Optional.empty();
-        String token = jwtHelper.createToken(u.getId());
-        String name = u.getName() != null ? u.getName() : "";
-        return Optional.of(new LoginResponse(token, u.getId(), name));
+        
+        // Récupérer tous les utilisateurs avec cet email
+        java.util.List<UsersJpaEntity> users = userRepo.findAllByMail(mailNorm);
+        if (users.isEmpty()) return Optional.empty();
+        
+        // Tester le mot de passe pour chaque utilisateur trouvé
+        for (UsersJpaEntity u : users) {
+            if (encoder.matches(password, u.getPswHash())) {
+                // Mot de passe trouvé, créer le token et retourner la réponse
+                String token = jwtHelper.createToken(u.getId());
+                String name = u.getName() != null ? u.getName() : "";
+                return Optional.of(new LoginResponse(token, u.getId(), name, u.isAdmin()));
+            }
+        }
+        
+        // Aucun utilisateur avec le bon mot de passe
+        return Optional.empty();
     }
 
-    public record LoginResponse(String token, Integer userId, String name) {}
+    public record LoginResponse(String token, Integer userId, String name, boolean isAdmin) {}
 }

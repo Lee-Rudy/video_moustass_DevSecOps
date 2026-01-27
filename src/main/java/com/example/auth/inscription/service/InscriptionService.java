@@ -7,6 +7,7 @@ import com.example.auth.inscription.ports.out.UserKeyVaultPort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -46,5 +47,15 @@ public class InscriptionService implements InscriptionUseCase
 
         // 5) save DB
         return inscriptionRepository.save(user);
+    }
+
+    @Override
+    public List<Users> getAllUsers() {
+        return inscriptionRepository.findAll();
+    }
+
+    @Override
+    public void deleteUser(Integer userId) {
+        inscriptionRepository.deleteById(userId);
     }
 }

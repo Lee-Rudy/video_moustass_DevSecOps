@@ -6,4 +6,8 @@ import java.util.List;
 public interface InscriptionUseCase 
 {
     Users saveUser(Users user);
+    
+    List<Users> getAllUsers();
+    
+    void deleteUser(Integer userId);
 }

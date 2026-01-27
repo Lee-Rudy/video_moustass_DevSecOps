@@ -45,7 +45,7 @@ public class AuthApplication
 	// {
     //     return args -> {
     //         // Users admin = new Users(0, "Admin", "brunerleerudy@gmail.com", "Admin123456789", true, null, null);
-    //         // Users user  = new Users(1, "Alice", "alice@gmail.com", "Alice123456789", false, null, null);
+            //  Users user  = new Users(1, "Alice", "alice@gmail.com", "Alice123456789", false, null, null);
     //         Users user  = new Users(3, "Rudy", "brunerlee@gmail.com", "Rudy123456789", false, null, null);
     //         //Users user  = new Users(5, "Lee", "brunerleerudy@gmail.com", "Lee123456789", false, null, null);
 

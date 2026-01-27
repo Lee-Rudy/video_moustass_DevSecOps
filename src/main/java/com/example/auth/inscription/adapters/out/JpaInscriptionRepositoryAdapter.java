@@ -6,6 +6,9 @@ import com.example.auth.inscription.ports.out.SpringDataUsersRepository;
 
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Component
 public class JpaInscriptionRepositoryAdapter implements InscriptionRepository 
 {
@@ -21,6 +24,19 @@ public class JpaInscriptionRepositoryAdapter implements InscriptionRepository
         UsersJpaEntity entity = toJpa(user);
         UsersJpaEntity saved = springRepo.save(entity);
         return toDomain(saved);
+    }
+
+    @Override
+    public List<Users> findAll() {
+        return springRepo.findAll()
+                .stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteById(Integer userId) {
+        springRepo.deleteById(userId);
     }
 
     private UsersJpaEntity toJpa(Users u) {

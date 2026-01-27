@@ -1,14 +1,39 @@
 import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 import { routesConfig } from "../routes/routesConfig";
 import "./css/Navbar/Navbar.css";
 
 export default function Navbar() {
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Filtrer les routes selon le rôle de l'utilisateur
+  const visibleRoutes = routesConfig.filter((r) => {
+    if (r.adminOnly) {
+      return user?.isAdmin === true;
+    }
+    if (r.userOnly) {
+      return user?.isAdmin === false;
+    }
+    return true;
+  });
+
+  // Simuler le chargement du nombre de notifications non lues
+  // En production, cela viendrait d'une API
+  useEffect(() => {
+    if (user && !user.isAdmin) {
+      // Simuler 2 notifications non lues
+      setUnreadCount(2);
+    }
+  }, [user]);
+
   return (
     <aside className="sidebar">
       <div className="sidebar__title">Dashboard</div>
 
       <nav className="sidebar__nav">
-        {routesConfig.map((r) => (
+        {visibleRoutes.map((r) => (
           <NavLink
             key={r.path}
             to={r.path}
@@ -18,6 +43,9 @@ export default function Navbar() {
             }
           >
             {r.label}
+            {r.path === "/notifications" && unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount}</span>
+            )}
           </NavLink>
         ))}
         <NavLink
