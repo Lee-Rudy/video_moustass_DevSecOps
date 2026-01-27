@@ -37,6 +37,7 @@ public class AuditLogService {
         log.setIpAddress(extractIpAddress(request));
         log.setUserAgent(extractUserAgent(request));
         log.setMetadata(null);
+        log.setCreatedAt(java.time.LocalDateTime.now());
 
         auditLogRepository.save(log);
     }
@@ -58,6 +59,7 @@ public class AuditLogService {
         log.setIpAddress(extractIpAddress(request));
         log.setUserAgent(extractUserAgent(request));
         log.setMetadata(metadata != null ? mapToJson(metadata) : null);
+        log.setCreatedAt(java.time.LocalDateTime.now());
 
         auditLogRepository.save(log);
     }

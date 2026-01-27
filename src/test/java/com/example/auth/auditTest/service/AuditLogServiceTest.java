@@ -170,4 +170,320 @@ class AuditLogServiceTest {
         assertTrue(createdAtMillis >= beforeCall - 1000);
         assertTrue(createdAtMillis <= afterCall + 1000);
     }
+
+    @Test
+    void logAction_shouldExtractIpFromXForwardedFor() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getHeader("X-Forwarded-For")).thenReturn("203.0.113.195, 70.41.3.18");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertEquals("203.0.113.195", savedLog.getIpAddress());
+    }
+
+    @Test
+    void logAction_shouldExtractIpFromXRealIp_whenXForwardedForMissing() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(mockRequest.getHeader("X-Real-IP")).thenReturn("192.168.1.50");
+        when(mockRequest.getRemoteAddr()).thenReturn("10.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertEquals("192.168.1.50", savedLog.getIpAddress());
+    }
+
+    @Test
+    void logAction_shouldExtractIpFromRemoteAddr_whenHeadersMissing() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(mockRequest.getHeader("X-Real-IP")).thenReturn(null);
+        when(mockRequest.getRemoteAddr()).thenReturn("172.16.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertEquals("172.16.0.1", savedLog.getIpAddress());
+    }
+
+    @Test
+    void logAction_shouldTruncateUserAgent_whenTooLong() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        String longUserAgent = "A".repeat(300); // 300 characters
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn(longUserAgent);
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNotNull(savedLog.getUserAgent());
+        assertEquals(255, savedLog.getUserAgent().length());
+    }
+
+    @Test
+    void logAction_shouldHandleNullRequest() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", null);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNull(savedLog.getIpAddress());
+        assertNull(savedLog.getUserAgent());
+    }
+
+    @Test
+    void logAction_shouldHandleNullUserId() {
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(null, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNull(savedLog.getActorUserId());
+        assertNull(savedLog.getActorName());
+        assertNull(savedLog.getActorMail());
+    }
+
+    @Test
+    void logActionWithMetadata_shouldSaveMetadataAsJson() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("key1", "value1");
+        metadata.put("key2", 123);
+        metadata.put("key3", true);
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", metadata, mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNotNull(savedLog.getMetadata());
+        assertTrue(savedLog.getMetadata().contains("key1"));
+        assertTrue(savedLog.getMetadata().contains("value1"));
+        assertTrue(savedLog.getMetadata().contains("key2"));
+        assertTrue(savedLog.getMetadata().contains("123"));
+        assertTrue(savedLog.getMetadata().contains("key3"));
+        assertTrue(savedLog.getMetadata().contains("true"));
+    }
+
+    @Test
+    void logActionWithMetadata_shouldHandleNullMetadata() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", null, mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNull(savedLog.getMetadata());
+    }
+
+    @Test
+    void logActionWithMetadata_shouldHandleEmptyMetadata() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", java.util.Collections.emptyMap(), mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNull(savedLog.getMetadata());
+    }
+
+    @Test
+    void logActionWithMetadata_shouldEscapeSpecialCharacters() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("quote", "He said \"Hello\"");
+        metadata.put("backslash", "Path\\to\\file");
+        metadata.put("newline", "Line1\nLine2");
+        metadata.put("tab", "Col1\tCol2");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", metadata, mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNotNull(savedLog.getMetadata());
+        assertTrue(savedLog.getMetadata().contains("\\\""));
+        assertTrue(savedLog.getMetadata().contains("\\\\"));
+        assertTrue(savedLog.getMetadata().contains("\\n"));
+        assertTrue(savedLog.getMetadata().contains("\\t"));
+    }
+
+    @Test
+    void logActionWithMetadata_shouldHandleNullValues() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("nullKey", null);
+        metadata.put("validKey", "value");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", metadata, mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNotNull(savedLog.getMetadata());
+        assertTrue(savedLog.getMetadata().contains("null"));
+        assertTrue(savedLog.getMetadata().contains("validKey"));
+    }
+
+    @Test
+    void logAction_shouldHandleEmptyXForwardedFor() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getHeader("X-Forwarded-For")).thenReturn("");
+        when(mockRequest.getHeader("X-Real-IP")).thenReturn("192.168.1.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertEquals("192.168.1.1", savedLog.getIpAddress());
+    }
+
+    @Test
+    void logAction_shouldHandleEmptyXRealIp() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(mockRequest.getHeader("X-Real-IP")).thenReturn("");
+        when(mockRequest.getRemoteAddr()).thenReturn("10.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertEquals("10.0.0.1", savedLog.getIpAddress());
+    }
+
+    @Test
+    void logActionWithMetadata_shouldHandleComplexObjects() {
+        UsersJpaEntity user = new UsersJpaEntity();
+        user.setId(1);
+        user.setName("User");
+        user.setMail("user@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(mockRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(mockRequest.getHeader("User-Agent")).thenReturn("Agent");
+
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("object", new Object());
+        metadata.put("double", 3.14);
+
+        auditLogService.logAction(1, "ACTION", "entity", 1, "message", metadata, mockRequest);
+
+        ArgumentCaptor<AuditLogJpaEntity> captor = ArgumentCaptor.forClass(AuditLogJpaEntity.class);
+        verify(auditLogRepository).save(captor.capture());
+
+        AuditLogJpaEntity savedLog = captor.getValue();
+        assertNotNull(savedLog.getMetadata());
+    }
 }
