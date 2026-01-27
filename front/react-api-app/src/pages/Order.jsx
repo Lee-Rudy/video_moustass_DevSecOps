@@ -32,7 +32,7 @@ export default function Order() {
   const [search, setSearch] = useState("");
   const [transactionSendTo, setTransactionSendTo] = useState("");
   const [amount, setAmount] = useState("5000");
-  const [title, setTitle] = useState("2000 dollars");
+  const [title, setTitle] = useState("2000 Roupies");
   const [errors, setErrors] = useState({ transactionSendTo: "", amount: "", title: "", video: "" });
   const [submitSteps, setSubmitSteps] = useState([]);
   const [submitError, setSubmitError] = useState("");
@@ -379,9 +379,9 @@ export default function Order() {
 
           {/* Amount */}
           <div style={ui.gridItem}>
-            <label style={ui.label}>Montant de la transaction ($)</label>
+            <label style={ui.label}>Montant de la transaction (Roupies)</label>
             <div style={ui.amountWrap}>
-              <span style={ui.currency}>$</span>
+              <span style={ui.currency}>Roupies</span>
               <input
                 value={amount}
                 onChange={(e) => setAmount(normalizeAmount(e.target.value))}
@@ -404,7 +404,7 @@ export default function Order() {
               const clean = sanitizeTitle(e.target.value);
               if (clean !== e.target.value) setTitle(clean);
             }}
-            placeholder='Ex: "Transaction 5000 dollars"'
+            placeholder='Ex: "Transaction 5000 Roupies"'
             style={ui.input}
           />
           <div style={ui.helper}>
@@ -435,13 +435,13 @@ export default function Order() {
             <div style={ui.row10}>
               {!recOpen ? (
                 <button type="button" onClick={openRecorder} style={ui.btnPrimary}>
-                  ● Enregistrer une vidéo
+                  Enregistrer une vidéo
                 </button>
               ) : (
                 <>
                   {recStatus !== "recording" && recStatus !== "paused" ? (
                     <button type="button" onClick={startRecording} style={ui.btnPrimary}>
-                      ● Démarrer
+                      Démarrer
                     </button>
                   ) : null}
 
@@ -493,7 +493,7 @@ export default function Order() {
                 </div>
                 <div style={ui.kv}>
                   <span style={ui.k}>Montant</span>
-                  <span style={ui.v}>{amount ? `$${amount}` : "—"}</span>
+                  <span style={ui.v}>{amount ? `${amount}` : "—"}</span>
                 </div>
                 <div style={ui.kv}>
                   <span style={ui.k}>Titre</span>
@@ -784,7 +784,7 @@ const ui = {
     padding: "10px 12px",
     borderRadius: 12,
     border: "1px solid rgba(124, 58, 237, 0.35)",
-    background: "linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(34, 197, 94, 0.85))",
+    background: "linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(124, 58, 237, 0.95))",
     color: "white",
     fontWeight: 900,
     cursor: "pointer",

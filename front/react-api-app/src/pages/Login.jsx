@@ -20,8 +20,13 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      const userData = await login(email, password);
+      // Rediriger vers le dashboard admin si c'est un admin, sinon vers le dashboard normal
+      if (userData.isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err?.message || "Erreur de connexion");
     } finally {

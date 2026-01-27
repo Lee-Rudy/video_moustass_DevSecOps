@@ -7,4 +7,8 @@ import com.example.auth.inscription.entity.Users;
 public interface InscriptionRepository 
 {
     Users save(Users user);
+    
+    List<Users> findAll();
+    
+    void deleteById(Integer userId);
 }

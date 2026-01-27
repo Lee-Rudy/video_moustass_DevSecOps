@@ -9,6 +9,9 @@ public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity,
     boolean existsByMail(String mail);
 
     java.util.Optional<UsersJpaEntity> findByMail(String mail);
+    
+    /** Retourne tous les utilisateurs avec cet email (pour gérer les doublons) */
+    java.util.List<UsersJpaEntity> findAllByMail(String mail);
 
     /** Utilisateurs non-admin pour le champ « Envoyé à » (Order). */
     java.util.List<UsersJpaEntity> findByIsAdminFalse();
