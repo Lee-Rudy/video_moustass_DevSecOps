@@ -156,6 +156,97 @@ class AuditLogControllerTest {
         verify(auditLogRepository).findAllByOrderByCreatedAtDesc();
     }
 
+    @Test
+    void getAllLogs_shouldCallRepositoryOnce() throws Exception {
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk());
+
+        verify(auditLogRepository, times(1)).findAllByOrderByCreatedAtDesc();
+    }
+
+    @Test
+    void getAllLogs_shouldReturnJsonContentType() throws Exception {
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"));
+    }
+
+    @Test
+    void getAllLogs_shouldIncludeIpAndUserAgent() throws Exception {
+        AuditLogJpaEntity log = createLog(1L, 1, "User", "user@test.com", "ACTION", "entity", 1, "message");
+        log.setIpAddress("203.0.113.195");
+        log.setUserAgent("Mozilla/5.0 Chrome");
+
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.singletonList(log));
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].ipAddress").value("203.0.113.195"))
+                .andExpect(jsonPath("$[0].userAgent").value("Mozilla/5.0 Chrome"));
+    }
+
+    @Test
+    void getAllLogs_shouldHandleLargeNumberOfLogs() throws Exception {
+        List<AuditLogJpaEntity> logs = new java.util.ArrayList<>();
+        for (int i = 1; i <= 100; i++) {
+            logs.add(createLog((long) i, i, "User" + i, "user" + i + "@test.com", 
+                              "ACTION", "entity", i, "message " + i));
+        }
+
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc()).thenReturn(logs);
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(100))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[99].id").value(100));
+    }
+
+    @Test
+    void getAllLogs_shouldMapEntityIdCorrectly() throws Exception {
+        AuditLogJpaEntity log = createLog(1L, 1, "User", "user@test.com", "ACTION", "orders", 999, "Order created");
+
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.singletonList(log));
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].entityId").value(999));
+    }
+
+    @Test
+    void getAllLogs_shouldHandleNullMetadata() throws Exception {
+        AuditLogJpaEntity log = createLog(1L, 1, "User", "user@test.com", "ACTION", "entity", 1, "message");
+        log.setMetadata(null);
+
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.singletonList(log));
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].metadata").isEmpty());
+    }
+
+    @Test
+    void getAllLogs_shouldIncludeMetadataWhenPresent() throws Exception {
+        AuditLogJpaEntity log = createLog(1L, 1, "User", "user@test.com", "ACTION", "entity", 1, "message");
+        log.setMetadata("{\"key\":\"value\",\"number\":123}");
+
+        when(auditLogRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Collections.singletonList(log));
+
+        mockMvc.perform(get("/api/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].metadata").value("{\"key\":\"value\",\"number\":123}"));
+    }
+
     // Helper methods
     private AuditLogJpaEntity createLog(Long id, Integer actorUserId, String actorName, String actorMail,
                                         String action, String entity, Integer entityId, String message) {

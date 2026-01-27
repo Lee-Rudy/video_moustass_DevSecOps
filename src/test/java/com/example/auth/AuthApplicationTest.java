@@ -26,7 +26,7 @@ class AuthApplicationTest {
         LoginService loginService = mock(LoginService.class);
         AuthApplication app = new AuthApplication();
         
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, false, null, null);
         
         assertNotNull(runner);
     }
@@ -38,15 +38,15 @@ class AuthApplicationTest {
             "test-token", 1, "alice", false
         );
         
-        when(loginService.authenticate("alice@gmail.com", "Alice123456789"))
+        when(loginService.authenticate("alice@gmail.com", "TestPassword123"))
             .thenReturn(Optional.of(response));
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "alice@gmail.com", "TestPassword123");
         
         runner.run();
         
-        verify(loginService).authenticate("alice@gmail.com", "Alice123456789");
+        verify(loginService).authenticate("alice@gmail.com", "TestPassword123");
     }
 
     @Test
@@ -56,11 +56,11 @@ class AuthApplicationTest {
             "jwt-token", 1, "Alice", false
         );
         
-        when(loginService.authenticate(anyString(), anyString()))
+        when(loginService.authenticate("test@example.com", "password"))
             .thenReturn(Optional.of(response));
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", "password");
         
         assertDoesNotThrow(() -> runner.run());
     }
@@ -69,11 +69,11 @@ class AuthApplicationTest {
     void demoLogin_shouldHandleFailedLogin() throws Exception {
         LoginService loginService = mock(LoginService.class);
         
-        when(loginService.authenticate(anyString(), anyString()))
+        when(loginService.authenticate("test@example.com", "wrongpass"))
             .thenReturn(Optional.empty());
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", "wrongpass");
         
         assertDoesNotThrow(() -> runner.run());
     }
@@ -85,16 +85,16 @@ class AuthApplicationTest {
             "test-jwt-token", 2, "Bob", false
         );
         
-        when(loginService.authenticate("alice@gmail.com", "Alice123456789"))
+        when(loginService.authenticate("bob@example.com", "BobPass123"))
             .thenReturn(Optional.of(response));
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "bob@example.com", "BobPass123");
         
         // Should not throw exception and should call authenticate
         runner.run();
         
-        verify(loginService).authenticate("alice@gmail.com", "Alice123456789");
+        verify(loginService).authenticate("bob@example.com", "BobPass123");
     }
 
     @Test
@@ -105,10 +105,92 @@ class AuthApplicationTest {
             .thenReturn(Optional.empty());
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", "password123");
         
         // Should handle empty Optional gracefully (will print failure message)
         assertDoesNotThrow(() -> runner.run());
+    }
+
+    @Test
+    void demoLogin_shouldBeDisabled_whenEnabledIsFalse() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, false, null, null);
+        
+        // Should not call authenticate when disabled
+        runner.run();
+        
+        verify(loginService, never()).authenticate(anyString(), anyString());
+    }
+
+    @Test
+    void demoLogin_shouldSkip_whenMailIsNull() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, true, null, "password");
+        
+        runner.run();
+        
+        verify(loginService, never()).authenticate(anyString(), anyString());
+    }
+
+    @Test
+    void demoLogin_shouldSkip_whenPasswordIsNull() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", null);
+        
+        runner.run();
+        
+        verify(loginService, never()).authenticate(anyString(), anyString());
+    }
+
+    @Test
+    void demoLogin_shouldSkip_whenBothCredentialsAreNull() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, true, null, null);
+        
+        runner.run();
+        
+        verify(loginService, never()).authenticate(anyString(), anyString());
+    }
+
+    @Test
+    void demoLogin_shouldAuthenticate_whenEnabledAndCredentialsProvided() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        LoginService.LoginResponse response = new LoginService.LoginResponse(
+            "test-token", 1, "TestUser", false
+        );
+        
+        when(loginService.authenticate("user@example.com", "SecurePass123"))
+            .thenReturn(Optional.of(response));
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, true, "user@example.com", "SecurePass123");
+        
+        runner.run();
+        
+        verify(loginService).authenticate("user@example.com", "SecurePass123");
+    }
+
+    @Test
+    void demoLogin_shouldWork_withEmptyStrings() throws Exception {
+        LoginService loginService = mock(LoginService.class);
+        
+        when(loginService.authenticate("", ""))
+            .thenReturn(Optional.empty());
+        
+        AuthApplication app = new AuthApplication();
+        CommandLineRunner runner = app.demoLogin(loginService, true, "", "");
+        
+        runner.run();
+        
+        verify(loginService).authenticate("", "");
     }
 
     @Test
@@ -126,28 +208,29 @@ class AuthApplicationTest {
     @Test
     void demoLogin_shouldCallAuthenticateWithCorrectCredentials() throws Exception {
         LoginService loginService = mock(LoginService.class);
+        String testMail = "specific@test.com";
+        String testPassword = "SpecificPass123";
         
-        when(loginService.authenticate(anyString(), anyString()))
+        when(loginService.authenticate(testMail, testPassword))
             .thenReturn(Optional.empty());
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, testMail, testPassword);
         
         runner.run();
         
-        // Verify it calls with alice credentials (as per the code)
-        verify(loginService).authenticate("alice@gmail.com", "Alice123456789");
+        verify(loginService).authenticate(testMail, testPassword);
     }
 
     @Test
     void demoLogin_shouldNotThrowException_whenServiceThrowsException() throws Exception {
         LoginService loginService = mock(LoginService.class);
         
-        when(loginService.authenticate(anyString(), anyString()))
+        when(loginService.authenticate("test@example.com", "password"))
             .thenThrow(new RuntimeException("Service error"));
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", "password");
         
         // The CommandLineRunner doesn't handle exceptions, so it will throw
         assertThrows(RuntimeException.class, () -> runner.run());
@@ -160,26 +243,26 @@ class AuthApplicationTest {
             "admin-token", 10, "Admin", true
         );
         
-        when(loginService.authenticate("alice@gmail.com", "Alice123456789"))
+        when(loginService.authenticate("admin@example.com", "AdminPass123"))
             .thenReturn(Optional.of(adminResponse));
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "admin@example.com", "AdminPass123");
         
         assertDoesNotThrow(() -> runner.run());
         
-        verify(loginService).authenticate("alice@gmail.com", "Alice123456789");
+        verify(loginService).authenticate("admin@example.com", "AdminPass123");
     }
 
     @Test
     void demoLogin_shouldHandleEmptyOptional() throws Exception {
         LoginService loginService = mock(LoginService.class);
         
-        when(loginService.authenticate("alice@gmail.com", "Alice123456789"))
+        when(loginService.authenticate("test@example.com", "TestPass123"))
             .thenReturn(Optional.empty());
         
         AuthApplication app = new AuthApplication();
-        CommandLineRunner runner = app.demoLogin(loginService);
+        CommandLineRunner runner = app.demoLogin(loginService, true, "test@example.com", "TestPass123");
         
         assertDoesNotThrow(() -> runner.run());
     }

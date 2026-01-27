@@ -124,7 +124,7 @@ export default function Dashboard() {
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  {/* <th>ID</th> */}
                   <th>Nom</th>
                   <th>Email</th>
                   <th>Rôle</th>
@@ -135,9 +135,9 @@ export default function Dashboard() {
               <tbody>
                 {users.map((u) => (
                   <tr key={u.idUsers}>
-                    <td style={{ fontFamily: "monospace", color: "#64748b" }}>
+                    {/* <td style={{ fontFamily: "monospace", color: "#64748b" }}>
                       #{u.idUsers}
-                    </td>
+                    </td> */}
                     <td>
                       <div className="user-name">{u.name}</div>
                     </td>

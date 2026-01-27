@@ -17,19 +17,32 @@ public class AuthApplication
         SpringApplication.run(AuthApplication.class, args);
     }
 
+    /**
+     * Bean de démonstration pour tester le login au démarrage.
+     * REMARQUE: Les credentials sont chargés depuis les variables d'environnement ou application.properties
+     * pour éviter les mots de passe hard-codés.
+     * 
+     * Pour désactiver ce bean en production, définir: demo.login.enabled=false
+     */
     @Bean
-    CommandLineRunner demoLogin(LoginService loginService) {
+    CommandLineRunner demoLogin(LoginService loginService, 
+                                 @org.springframework.beans.factory.annotation.Value("${demo.login.enabled:false}") boolean enabled,
+                                 @org.springframework.beans.factory.annotation.Value("${demo.login.mail:#{null}}") String mail,
+                                 @org.springframework.beans.factory.annotation.Value("${demo.login.password:#{null}}") String password) {
         return args -> {
-            //login user
-            String mail = "alice@gmail.com";
-            String password = "Alice123456789";
+            // Bean désactivé par défaut en production pour des raisons de sécurité
+            if (!enabled) {
+                System.out.println("Demo login désactivé (demo.login.enabled=false)");
+                return;
+            }
+            
+            // Vérification que les credentials sont fournis via configuration
+            if (mail == null || password == null) {
+                System.out.println("AVERTISSEMENT: Credentials de démonstration non configurés dans application.properties");
+                return;
+            }
 
-            // token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcklkIjoxfQ.hGlTvJpW7Y-GHTvunyfmcXIrvQOkhfgzDeus4D1PiAU
-            // token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwidXNlcklkIjoyfQ.fY1ZyJct0UTas5BTBg3SYzeZttGek8_VsSoaOkoYpjU
-
-            //login admin
-            // String mail = "brunerleerudy@gmail.com";
-            // String password = "Admin123456789";
+            // Test de login avec les credentials configurés
             var opt = loginService.authenticate(mail, password);
             if (opt.isPresent()) {
                 var res = opt.get();
