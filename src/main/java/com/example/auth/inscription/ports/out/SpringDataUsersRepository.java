@@ -18,4 +18,7 @@ public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity,
 
     /** Recherche un utilisateur par OAuth provider et provider ID */
     java.util.Optional<UsersJpaEntity> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
+    
+    /** Recherche un utilisateur par son nom */
+    java.util.Optional<UsersJpaEntity> findByName(String name);
 }

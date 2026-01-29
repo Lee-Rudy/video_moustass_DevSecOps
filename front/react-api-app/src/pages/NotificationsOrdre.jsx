@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiBell, FiEye, FiCheckCircle } from "react-icons/fi";
+import { getNotifications, markNotificationAsRead } from "../api/authApi";
 import "../components/css/Dashboard/Dashboard.css";
 
 const styles = {
@@ -64,45 +65,20 @@ export default function NotificationsOrdre() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadNotifications = useCallback(() => {
-    // Simulation de notifications (en production, utiliser une vraie API)
-    const mockNotifications = [
-      {
-        id: 1,
-        type: "ORDRE_RECU",
-        expediteur: "Admin",
-        message: "Vous avez reçu une nouvelle demande d'ordre",
-        ordreId: 123,
-        date: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-        isNew: true,
-      },
-      {
-        id: 2,
-        type: "ORDRE_RECU",
-        expediteur: "Alice",
-        message: "Alice vous a envoyé un ordre",
-        ordreId: 122,
-        date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2h ago
-        isNew: true,
-      },
-      {
-        id: 3,
-        type: "ORDRE_VALIDE",
-        expediteur: "Système",
-        message: "Votre ordre #121 a été validé",
-        ordreId: 121,
-        date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-        isNew: false,
-      },
-    ];
-
-    // Filtrer pour ne garder que les notifications de l'utilisateur connecté
-    // En production, l'API filtrerait côté serveur
-    setTimeout(() => {
-      setNotifications(mockNotifications);
+  const loadNotifications = useCallback(async () => {
+    if (!user?.token) return;
+    
+    try {
+      setLoading(true);
+      const data = await getNotifications(user.token);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Erreur chargement notifications:', error);
+      setNotifications([]);
+    } finally {
       setLoading(false);
-    }, 500);
-  }, [user?.userId]);
+    }
+  }, [user?.token]);
 
   useEffect(() => {
     if (!user || user.isAdmin) {
@@ -135,10 +111,17 @@ export default function NotificationsOrdre() {
     navigate("/listOrder");
   };
 
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isNew: false } : n))
-    );
+  const markAsRead = async (id) => {
+    if (!user?.token) return;
+    
+    try {
+      await markNotificationAsRead(id, user.token);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isNew: false } : n))
+      );
+    } catch (error) {
+      console.error('Erreur marquage notification:', error);
+    }
   };
 
   const newCount = notifications.filter((n) => n.isNew).length;

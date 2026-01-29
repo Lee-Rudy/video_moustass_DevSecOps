@@ -5,6 +5,7 @@ import com.example.auth.inscription.ports.out.UserKeyVaultPort;
 import com.example.auth.inscription.ports.out.SpringDataUsersRepository;
 import com.example.auth.login.entity.SignatureTransactionJpaEntity;
 import com.example.auth.login.ports.SpringDataSignatureTransactionRepository;
+import com.example.auth.notification.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,6 +37,7 @@ public class OrderService {
     private final SpringDataSignatureTransactionRepository sigRepo;
     private final SpringDataUsersRepository userRepo;
     private final UserKeyVaultPort vaultPort;
+    private final NotificationService notificationService;
 
     @Value("${app.video.storage-path:./data/videos}")
     private String storagePath;
@@ -45,10 +47,12 @@ public class OrderService {
 
     public OrderService(SpringDataSignatureTransactionRepository sigRepo,
                         SpringDataUsersRepository userRepo,
-                        UserKeyVaultPort vaultPort) {
+                        UserKeyVaultPort vaultPort,
+                        NotificationService notificationService) {
         this.sigRepo = sigRepo;
         this.userRepo = userRepo;
         this.vaultPort = vaultPort;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -127,6 +131,12 @@ public class OrderService {
         e.setSignedAt(now);
         e.setCreatedAt(now);
         sigRepo.save(e);
+
+        // Créer une notification pour le destinataire
+        UsersJpaEntity recipient = userRepo.findByName(transactionSendTo.trim()).orElse(null);
+        if (recipient != null && !recipient.isAdmin()) {
+            notificationService.createOrderNotification(userId, recipient.getId(), e.getId(), transactionSendTo);
+        }
 
         return new CreateOrderResult(e.getId(), List.of("Vidéo chiffrée", "Vidéo signée RSA"));
     }

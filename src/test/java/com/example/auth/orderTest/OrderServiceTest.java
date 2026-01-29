@@ -5,6 +5,7 @@ import com.example.auth.inscription.ports.out.SpringDataUsersRepository;
 import com.example.auth.inscription.ports.out.UserKeyVaultPort;
 import com.example.auth.login.entity.SignatureTransactionJpaEntity;
 import com.example.auth.login.ports.SpringDataSignatureTransactionRepository;
+import com.example.auth.notification.service.NotificationService;
 import com.example.auth.order.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class OrderServiceTest {
     private SpringDataSignatureTransactionRepository sigRepo;
     private SpringDataUsersRepository userRepo;
     private UserKeyVaultPort vaultPort;
+    private NotificationService notificationService;
     private OrderService orderService;
 
     @TempDir
@@ -49,7 +51,8 @@ class OrderServiceTest {
         sigRepo = mock(SpringDataSignatureTransactionRepository.class);
         userRepo = mock(SpringDataUsersRepository.class);
         vaultPort = mock(UserKeyVaultPort.class);
-        orderService = new OrderService(sigRepo, userRepo, vaultPort);
+        notificationService = mock(NotificationService.class);
+        orderService = new OrderService(sigRepo, userRepo, vaultPort, notificationService);
         
         // Configurer les propriétés
         ReflectionTestUtils.setField(orderService, "storagePath", tempDir.toString());

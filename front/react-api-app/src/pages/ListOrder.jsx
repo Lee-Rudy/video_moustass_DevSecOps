@@ -137,6 +137,7 @@ export default function ListOrder() {
             <thead>
               <tr>
                 <th style={styles.th}>Titre</th>
+                <th style={styles.th}>De</th>
                 <th style={styles.th}>Hash</th>
                 <th style={styles.th}>Chemin</th>
                 <th style={styles.th}>Expiration</th>
@@ -150,6 +151,7 @@ export default function ListOrder() {
               {filtered.map((o) => (
                 <tr key={o.id}>
                   <td style={styles.td}>{o.videoName || "—"}</td>
+                  <td style={styles.td}><strong style={{ color: "#0f172a" }}>{o.senderName || "—"}</strong></td>
                   <td style={styles.td} title={o.videoHash}><span style={styles.hash}>{o.videoHash ? `${o.videoHash.slice(0, 10)}…` : "—"}</span></td>
                   <td style={styles.td} title={o.pathVideo}><span style={styles.path}>{o.pathVideo || "—"}</span></td>
                   <td style={styles.td}>{fmt(o.expiredVideo)}</td>

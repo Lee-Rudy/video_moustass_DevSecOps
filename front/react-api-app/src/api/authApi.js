@@ -160,3 +160,33 @@ export function initiateGoogleOAuth() {
   const backendUrl = API_BASE || 'http://localhost:8082';
   window.location.href = `${backendUrl}/oauth2/authorization/google`;
 }
+
+/**
+ * GET /api/notifications : récupère toutes les notifications de l'utilisateur connecté
+ */
+export async function getNotifications(token) {
+  const res = await fetch(API_BASE + '/api/notifications', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Erreur chargement notifications');
+  return res.json();
+}
+
+/**
+ * POST /api/notifications/:id/read : marque une notification comme lue
+ */
+export async function markNotificationAsRead(notificationId, token) {
+  const res = await fetch(API_BASE + '/api/notifications/' + notificationId + '/read', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+  });
+  if (!res.ok) throw new Error('Erreur marquage notification');
+  return res.json();
+}
+
+/**
+ * GET /api/notifications/unread-count : compte les notifications non lues
+ */
+export async function getUnreadNotificationsCount(token) {
+  const res = await fetch(API_BASE + '/api/notifications/unread-count', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Erreur comptage notifications');
+  return res.json();
+}

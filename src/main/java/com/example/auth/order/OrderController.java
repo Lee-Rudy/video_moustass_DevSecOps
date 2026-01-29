@@ -118,6 +118,10 @@ public class OrderController {
     }
 
     private OrderReceivedDto toDto(SignatureTransactionJpaEntity e) {
+        String senderName = userRepo.findById(e.getUserId())
+                .map(u -> u.getName() != null ? u.getName() : "Utilisateur #" + e.getUserId())
+                .orElse("Utilisateur #" + e.getUserId());
+        
         return new OrderReceivedDto(
                 e.getId(),
                 e.getVideoName(),
@@ -126,10 +130,12 @@ public class OrderController {
                 e.getExpiredVideo() != null ? e.getExpiredVideo().toString() : null,
                 e.isActive(),
                 e.getSignedAt() != null ? e.getSignedAt().toString() : null,
-                e.getCreatedAt() != null ? e.getCreatedAt().toString() : null
+                e.getCreatedAt() != null ? e.getCreatedAt().toString() : null,
+                senderName
         );
     }
 
     public record OrderReceivedDto(Integer id, String videoName, String videoHash, String pathVideo,
-                                   String expiredVideo, boolean active, String signedAt, String createdAt) {}
+                                   String expiredVideo, boolean active, String signedAt, String createdAt,
+                                   String senderName) {}
 }

@@ -1,4 +1,4 @@
--- database name : auth_moustass
+-- database name : moustass_video
 
 -- microservice authentification
 CREATE TABLE users 
@@ -119,5 +119,24 @@ CREATE TABLE IF NOT EXISTS mfa_codes (
     
     INDEX idx_mfa_user_id (user_id),
     INDEX idx_mfa_expires_at (expires_at)
+);
+
+-- ====================================
+-- Migration V3: Ajout du système de notifications
+-- Date: 2026-01-30
+-- Description: Crée la table notifications pour gérer les notifications des utilisateurs
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    order_id INT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_notifications_recipient_id (recipient_id),
+    INDEX idx_notifications_is_read (is_read)
 );
 
