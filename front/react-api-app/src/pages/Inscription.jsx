@@ -106,7 +106,7 @@ export default function Inscription() {
       <div className="dashboard-header">
         <h1 className="dashboard-title">Créer un utilisateur</h1>
         <p className="dashboard-subtitle">
-          Remplissez le formulaire pour créer un nouvel utilisateur
+          Remplissez les informations ci-dessous pour créer un nouveau compte utilisateur
         </p>
       </div>
 

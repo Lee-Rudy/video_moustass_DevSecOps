@@ -114,8 +114,9 @@ export default function Dashboard() {
 
         {!loading && !error && users.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-icon">👥</div>
+            <FiUserPlus className="empty-state-icon" />
             <p>Aucun utilisateur trouvé</p>
+            <p className="empty-state-subtitle">Commencez par créer votre premier utilisateur</p>
           </div>
         )}
 

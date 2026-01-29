@@ -168,11 +168,13 @@ export default function NotificationsOrdre() {
 
       {!loading && notifications.length === 0 && (
         <div style={styles.empty}>
-          <div style={styles.emptyIcon}>🔔</div>
-          <h3 style={{ margin: "0 0 8px", fontSize: 18, color: "#0f172a" }}>
+          <div style={styles.emptyIcon}>
+            <FiBell style={{ fontSize: 56, color: "#9ca3af" }} />
+          </div>
+          <h3 style={{ margin: "0 0 8px", fontSize: 18, color: "#111827", fontWeight: 700 }}>
             Aucune notification
           </h3>
-          <p style={{ margin: 0, fontSize: 14 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
             Vous n'avez pas encore reçu de notifications d'ordre
           </p>
         </div>

@@ -2,7 +2,28 @@ import { NavLink } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { routesConfig } from "../routes/routesConfig";
+import { 
+  FiHome, 
+  FiUsers, 
+  FiUserPlus, 
+  FiFileText, 
+  FiBell, 
+  FiList, 
+  FiPlusCircle,
+  FiLogOut 
+} from "react-icons/fi";
 import "./css/Navbar/Navbar.css";
+
+// Mapping des icônes pour chaque route
+const routeIcons = {
+  "/dashboard": FiHome,
+  "/admin": FiUsers,
+  "/inscription": FiUserPlus,
+  "/logs": FiFileText,
+  "/notifications": FiBell,
+  "/listOrder": FiList,
+  "/order": FiPlusCircle,
+};
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -30,31 +51,47 @@ export default function Navbar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar__title">Dashboard</div>
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          <div className="logo-icon">MV</div>
+          <div className="logo-text">
+            <div className="logo-title">Moustass Video</div>
+            <div className="logo-subtitle">Dashboard</div>
+          </div>
+        </div>
+      </div>
 
-      <nav className="sidebar__nav">
-        {visibleRoutes.map((r) => (
-          <NavLink
-            key={r.path}
-            to={r.path}
-            end={r.end}
-            className={({ isActive }) =>
-              `sidebar__link ${isActive ? "active" : ""}`
-            }
-          >
-            {r.label}
-            {r.path === "/notifications" && unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount}</span>
-            )}
-          </NavLink>
-        ))}
+      <nav className="sidebar-nav">
+        {visibleRoutes.map((r) => {
+          const Icon = routeIcons[r.path] || FiHome;
+          return (
+            <NavLink
+              key={r.path}
+              to={r.path}
+              end={r.end}
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "active" : ""}`
+              }
+            >
+              <Icon className="nav-icon" />
+              <span className="nav-label">{r.label}</span>
+              {r.path === "/notifications" && unreadCount > 0 && (
+                <span className="notification-badge">{unreadCount}</span>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="sidebar-footer">
         <NavLink
           to="/"
-          className="sidebar__link sidebar__link--logout"
+          className="nav-link logout-link"
         >
-          Déconnexion
+          <FiLogOut className="nav-icon" />
+          <span className="nav-label">Déconnexion</span>
         </NavLink>
-      </nav>
+      </div>
     </aside>
   );
 }
