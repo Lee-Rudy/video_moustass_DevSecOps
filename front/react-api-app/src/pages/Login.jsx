@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import MfaModal from "../components/MfaModal";
 import { initiateGoogleOAuth, verifyMfaCode, resendMfaCode } from "../api/authApi";
+import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 import "../components/css/Login/Login.css";
 
 export default function Login() {
@@ -135,42 +136,40 @@ export default function Login() {
   }
 
   return (
-    <div className="login-layout">
-      {/* LEFT */}
-      <div className="login-page">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="logo">Moustass Video</div>
-            <h1>Content de te revoir</h1>
-            <p>Connecte-toi pour continuer</p>
-          </div>
+    <div className="login-container">
+      <div className="login-box">
+        <div className="login-header">
+          <h1>Connexion</h1>
+          <p>Bienvenue, veuillez vous connecter à votre compte</p>
+        </div>
 
-          <button 
-            className="google-btn" 
-            type="button"
-            onClick={handleGoogleLogin}
-          >
-            <img src={googleIconUrl} alt="Google" />
-            Se connecter avec Google
-          </button>
+        {error && <div className="error-message">{error}</div>}
 
-          <div className="divider">OU</div>
-
-          <form onSubmit={handleSubmit}>
-            {error && <p className="login-error" style={{ color: "#c00", marginBottom: 8 }}>{error}</p>}
-            <label>Email</label>
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <label className="form-label">
+              <FiMail className="label-icon" />
+              Email
+            </label>
             <input
               type="email"
-              placeholder="ex: brunernoel@email.com"
+              className="form-input"
+              placeholder="votre@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
 
-            <label>Mot de passe</label>
-            <div className="password-field">
+          <div className="form-group">
+            <label className="form-label">
+              <FiLock className="label-icon" />
+              Mot de passe
+            </label>
+            <div className="password-wrapper">
               <input
                 type={showPwd ? "text" : "password"}
+                className="form-input"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -178,30 +177,37 @@ export default function Login() {
               />
               <button
                 type="button"
-                className="toggle-btn"
+                className="password-toggle-btn"
                 onClick={() => setShowPwd(!showPwd)}
+                aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
-                {showPwd ? "Masquer" : "Afficher"}
+                {showPwd ? <FiEyeOff /> : <FiEye />}
               </button>
             </div>
+          </div>
 
-            <button
-              className="submit-btn"
-              type="submit"
-              disabled={loading || !email || password.length < 4}
-            >
-              {loading ? "Connexion..." : "Se connecter"}
-            </button>
-          </form>
+          <button
+            type="submit"
+            className="btn-submit"
+            disabled={loading || !email || password.length < 4}
+          >
+            {loading ? "Connexion en cours..." : "Se connecter"}
+          </button>
+        </form>
 
-          <p className="footer-text">
-            Pas encore de compte ? <a href="/register">Créer un compte</a>
-          </p>
+        <div className="divider">
+          <span>OU</span>
         </div>
-      </div>
 
-      {/* RIGHT IMAGE */}
-      <div className="login-image" />
+        <button 
+          className="btn-google" 
+          type="button"
+          onClick={handleGoogleLogin}
+        >
+          <img src={googleIconUrl} alt="Google" className="google-icon" />
+          Continuer avec Google
+        </button>
+      </div>
 
       {/* MFA MODAL */}
       <MfaModal
