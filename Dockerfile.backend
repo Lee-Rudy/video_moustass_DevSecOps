@@ -1,0 +1,58 @@
+# ==============================================================================
+# Dockerfile Multi-stage pour le Backend Spring Boot
+# ==============================================================================
+# Stage 1: Build de l'application avec Maven
+FROM maven:3.9.9-eclipse-temurin-17-alpine AS builder
+
+WORKDIR /app
+
+# Copie des fichiers de configuration Maven pour le cache des dépendances
+COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw .
+COPY mvnw.cmd .
+
+# Téléchargement des dépendances (layer cachée)
+RUN mvn dependency:go-offline -B
+
+# Copie du code source
+COPY src ./src
+
+# Build de l'application (skip tests pour accélérer le build)
+RUN mvn clean package -DskipTests -B
+
+# ==============================================================================
+# Stage 2: Image de production
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Installation des outils nécessaires
+RUN apk add --no-cache curl bash
+
+# Création d'un utilisateur non-root pour la sécurité
+RUN addgroup -S spring && adduser -S spring -G spring
+
+# Copie du JAR depuis le stage builder
+COPY --from=builder /app/target/*.jar app.jar
+
+# Création des répertoires nécessaires avec les bonnes permissions
+RUN mkdir -p /app/data/videos && \
+    chown -R spring:spring /app
+
+# Changement vers l'utilisateur non-root
+USER spring:spring
+
+# Exposition du port de l'application
+EXPOSE 8082
+
+# Health check pour Docker
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8082/actuator/health || exit 1
+
+# Variables d'environnement par défaut (peuvent être override)
+ENV JAVA_OPTS="-Xmx512m -Xms256m" \
+    SPRING_PROFILES_ACTIVE="docker"
+
+# Commande de démarrage avec optimisations JVM
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar /app/app.jar"]

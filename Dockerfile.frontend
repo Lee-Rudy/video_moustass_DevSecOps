@@ -1,0 +1,99 @@
+# ==============================================================================
+# Dockerfile Multi-stage pour le Frontend React/Vite
+# ==============================================================================
+# Stage 1: Build de l'application React
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copie des fichiers de dépendances pour le cache
+COPY front/react-api-app/package*.json ./
+
+# Installation des dépendances
+RUN npm ci --legacy-peer-deps
+
+# Copie du code source
+COPY front/react-api-app/ ./
+
+# Build de l'application pour la production
+RUN npm run build
+
+# ==============================================================================
+# Stage 2: Serveur Nginx pour servir l'application
+FROM nginx:1.27-alpine
+
+# Installation de curl pour les health checks
+RUN apk add --no-cache curl
+
+# Copie des fichiers buildés
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Configuration personnalisée de Nginx
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gestion des routes React Router (SPA)
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Proxy des requêtes API vers le backend
+    location /api {
+        proxy_pass http://backend:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Proxy pour OAuth2
+    location /login/oauth2 {
+        proxy_pass http://backend:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Proxy pour OAuth2 callback
+    location /oauth2/authorization {
+        proxy_pass http://backend:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Configuration de compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1000;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript;
+
+    # Headers de sécurité
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+}
+EOF
+
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,234 @@
+# ==============================================================================
+# Docker Compose - Application Vidéo Moustass DevSecOps
+# Services: MySQL, Vault, Backend Spring Boot, Frontend React
+# ==============================================================================
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Base de données MySQL avec persistance
+  # ===========================================================================
+  mysql:
+    image: mysql:8.4
+    container_name: moustass-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secure_password_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-moustass_video}
+      MYSQL_USER: ${MYSQL_USER:-moustass_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-moustass_password_2026}
+      TZ: Europe/Paris
+    ports:
+      - "3307:3306"  # Port externe:interne (évite conflit avec MySQL local)
+    volumes:
+      # Volume persistant pour les données MySQL
+      - mysql_data:/var/lib/mysql
+      # Script d'initialisation de la base de données
+      - ./database/migrations/service_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - moustass-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_secure_password_2026}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --max_connections=200
+      --wait_timeout=28800
+
+  # ===========================================================================
+  # HashiCorp Vault pour la gestion des secrets et clés
+  # ===========================================================================
+  vault:
+    image: hashicorp/vault:1.18
+    container_name: moustass-vault
+    restart: unless-stopped
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-dev-only-token-change-in-prod}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      # Volume persistant pour les données Vault (clés, secrets)
+      - vault_data:/vault/file
+      - vault_logs:/vault/logs
+    networks:
+      - moustass-network
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--proxy", "off", "http://localhost:8200/v1/sys/health?standbyok=true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command: server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-only-token-change-in-prod}
+
+  # ===========================================================================
+  # Initialisation de Vault (création de la clé Transit)
+  # ===========================================================================
+  vault-init:
+    image: hashicorp/vault:1.18
+    container_name: moustass-vault-init
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-dev-only-token-change-in-prod}
+    networks:
+      - moustass-network
+    command: >
+      sh -c "
+        echo '🔐 Attente du démarrage de Vault...';
+        sleep 5;
+        
+        echo '🔐 Activation du moteur Transit pour le chiffrement...';
+        vault secrets enable -path=transit transit || echo 'Transit déjà activé';
+        
+        echo '🔐 Création de la clé video-dek pour le chiffrement des vidéos...';
+        vault write -f transit/keys/video-dek || echo 'Clé video-dek déjà créée';
+        
+        echo '✅ Vault initialisé avec succès !';
+      "
+    restart: on-failure
+
+  # ===========================================================================
+  # Backend Spring Boot (Authentification, MFA, OAuth2, API)
+  # ===========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: ${DOCKER_USERNAME:-moustass}/video-moustass-backend:${VERSION:-latest}
+    container_name: moustass-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+    environment:
+      # Configuration Base de données
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-moustass_video}
+      DB_USER: ${MYSQL_USER:-moustass_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-moustass_password_2026}
+      
+      # Configuration Vault
+      VAULT_TOKEN: ${VAULT_TOKEN:-dev-only-token-change-in-prod}
+      SPRING_CLOUD_VAULT_URI: http://vault:8200
+      
+      # Configuration JWT
+      JWT_SECRET: ${JWT_SECRET:-PleaseChangeMeInProdUseAtLeast32CharactersForSecurity2026!}
+      
+      # Configuration Frontend (CORS)
+      REACT_HOST: http://localhost
+      REACT_PORT: 3000
+      
+      # Configuration Stockage Vidéos
+      VIDEO_STORAGE_PATH: /app/data/videos
+      
+      # Configuration Email (MFA)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-brunerleerudy@gmail.com}
+      SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD:-jmlm zwbc hwej wilb}
+      
+      # Configuration MFA
+      MFA_CODE_EXPIRATION: 10
+      MFA_CODE_LENGTH: 6
+      
+      # Configuration OAuth2 Google
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-485222580684-rs5akaebqn716sfiu00sp9levf1r3dhg.apps.googleusercontent.com}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-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}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: ${OAUTH2_REDIRECT_URI:-http://localhost:8082/login/oauth2/code/google}
+      
+      # Configuration Java/JVM
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+      
+      # Configuration Spring Profile
+      SPRING_PROFILES_ACTIVE: docker
+      
+      # Demo Login (désactivé par défaut)
+      DEMO_LOGIN_ENABLED: false
+    ports:
+      - "8082:8082"
+    volumes:
+      # Volume persistant pour les vidéos chiffrées
+      - video_storage:/app/data/videos
+    networks:
+      - moustass-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/users/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # ===========================================================================
+  # Frontend React/Vite (Interface Utilisateur)
+  # ===========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: ${DOCKER_USERNAME:-moustass}/video-moustass-frontend:${VERSION:-latest}
+    container_name: moustass-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # Configuration du proxy Nginx vers le backend
+      BACKEND_URL: http://backend:8082
+    ports:
+      - "3000:80"  # Port 3000 externe -> 80 interne (Nginx)
+    networks:
+      - moustass-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+# =============================================================================
+# Volumes persistants
+# =============================================================================
+volumes:
+  # Données MySQL (base de données)
+  mysql_data:
+    driver: local
+    name: moustass_mysql_data
+  
+  # Données Vault (secrets, clés de chiffrement)
+  vault_data:
+    driver: local
+    name: moustass_vault_data
+  
+  # Logs Vault
+  vault_logs:
+    driver: local
+    name: moustass_vault_logs
+  
+  # Stockage des vidéos chiffrées
+  video_storage:
+    driver: local
+    name: moustass_video_storage
+
+# =============================================================================
+# Réseau interne pour la communication entre services
+# =============================================================================
+networks:
+  moustass-network:
+    name: moustass-network
+    driver: bridge
