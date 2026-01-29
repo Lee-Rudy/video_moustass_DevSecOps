@@ -40,8 +40,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const setAuthData = useCallback((data) => {
+    const u = {
+      token: data.token,
+      userId: data.userId,
+      name: data.name || '',
+      isAdmin: data.isAdmin || false
+    };
+    setUser(u);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, setAuthData, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

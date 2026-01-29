@@ -30,6 +30,12 @@ public class UsersJpaEntity
     @Column(name = "vault_key", columnDefinition = "text")
     private String vaultKey;
 
+    @Column(name = "oauth_provider")
+    private String oauthProvider;
+
+    @Column(name = "oauth_provider_id")
+    private String oauthProviderId;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -59,6 +65,12 @@ public class UsersJpaEntity
 
     public String getVaultKey() { return vaultKey; }
     public void setVaultKey(String vaultKey) { this.vaultKey = vaultKey; }
+
+    public String getOauthProvider() { return oauthProvider; }
+    public void setOauthProvider(String oauthProvider) { this.oauthProvider = oauthProvider; }
+
+    public String getOauthProviderId() { return oauthProviderId; }
+    public void setOauthProviderId(String oauthProviderId) { this.oauthProviderId = oauthProviderId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

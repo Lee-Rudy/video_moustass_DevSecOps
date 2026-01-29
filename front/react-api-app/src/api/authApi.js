@@ -118,3 +118,45 @@ export async function deleteUser(userId, token) {
   });
   if (!res.ok) throw new Error('Erreur suppression utilisateur');
 }
+
+/**
+ * POST /api/oauth2/verify-mfa : vérifier le code MFA après authentification OAuth2.
+ * @param {string} sessionToken - Token de session MFA
+ * @param {string} code - Code MFA à 6 chiffres
+ * @returns { Promise<{ token, userId, name, email, isAdmin }> }
+ */
+export async function verifyMfaCode(sessionToken, code) {
+  const res = await fetch(API_BASE + '/api/oauth2/verify-mfa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionToken, code }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Code MFA invalide ou expiré');
+  return data;
+}
+
+/**
+ * POST /api/oauth2/resend-mfa : renvoyer un nouveau code MFA.
+ * @param {string} sessionToken - Token de session MFA
+ * @returns { Promise<{ sessionToken, message }> }
+ */
+export async function resendMfaCode(sessionToken) {
+  const res = await fetch(API_BASE + '/api/oauth2/resend-mfa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionToken }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Échec du renvoi du code MFA');
+  return data;
+}
+
+/**
+ * Initie l'authentification OAuth2 avec Google.
+ * Redirige l'utilisateur vers la page d'authentification Google.
+ */
+export function initiateGoogleOAuth() {
+  const backendUrl = API_BASE || 'http://localhost:8082';
+  window.location.href = `${backendUrl}/oauth2/authorization/google`;
+}

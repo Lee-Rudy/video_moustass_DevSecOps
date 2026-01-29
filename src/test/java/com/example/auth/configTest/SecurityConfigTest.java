@@ -3,6 +3,8 @@ package com.example.auth.configTest;
 import com.example.auth.config.JwtAuthFilter;
 import com.example.auth.config.JwtHelper;
 import com.example.auth.config.SecurityConfig;
+import com.example.auth.oauth2.handler.OAuth2AuthenticationSuccessHandler;
+import com.example.auth.oauth2.service.CustomOAuth2UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,10 +18,17 @@ class SecurityConfigTest {
 
     private SecurityConfig securityConfig;
     private JwtHelper jwtHelper;
+    private CustomOAuth2UserService customOAuth2UserService;
+    private OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
 
     @BeforeEach
     void setUp() {
+        customOAuth2UserService = mock(CustomOAuth2UserService.class);
+        oauth2SuccessHandler = mock(OAuth2AuthenticationSuccessHandler.class);
         securityConfig = new SecurityConfig();
+        // Injection des mocks via setters
+        securityConfig.setCustomOAuth2UserService(customOAuth2UserService);
+        securityConfig.setOauth2SuccessHandler(oauth2SuccessHandler);
         jwtHelper = mock(JwtHelper.class);
     }
 

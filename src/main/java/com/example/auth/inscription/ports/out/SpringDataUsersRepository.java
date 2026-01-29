@@ -15,4 +15,7 @@ public interface SpringDataUsersRepository extends JpaRepository<UsersJpaEntity,
 
     /** Utilisateurs non-admin pour le champ « Envoyé à » (Order). */
     java.util.List<UsersJpaEntity> findByIsAdminFalse();
+
+    /** Recherche un utilisateur par OAuth provider et provider ID */
+    java.util.Optional<UsersJpaEntity> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
 }
